@@ -1,57 +1,110 @@
-#include <iostream> // This directive includes the iostream library, which allows us to use input and output streams (like std::cin and std::cout).
-#include <string>   // This directive includes the string library, which provides the std::string class for handling text strings.
-#include <vector>   // This directive includes the vector library, which provides the std::vector class for dynamic arrays.
+#include <iostream> // Input-output stream for std::cin, std::cout, etc.
+#include <string>   // String handling with std::string
+#include <vector>   // Dynamic array handling with std::vector
+#include <fstream>  // File stream handling with std::fstream, std::ifstream, std::ofstream
 
 /// Define a class named TodoItem to represent a single to-do item.
 class TodoItem {
 public:
-    // Constructor: This special function is called when an object of the class is created.
-    // It initializes the TodoItem with a description and an optional completed status (default is false).
+    // Constructor to initialize the TodoItem with a description and an optional completed status (default is false).
     TodoItem(const std::string &description, bool completed = false)
-        : description(description), completed(completed) {} // Member initializer list initializes the member variables.
+        : description(description), completed(completed) {}
 
-    // Getter method to retrieve the description of the to-do item.
+    // Getter for the description of the to-do item.
     std::string getDescription() const { return description; }
 
-    // Getter method to check if the to-do item is completed.
+    // Getter to check if the to-do item is completed.
     bool isCompleted() const { return completed; }
 
     // Method to mark the to-do item as completed.
     void complete() { completed = true; }
 
+    // Method to return a string representation of the to-do item for saving to a file.
+    std::string toString() const {
+        return description + (completed ? " [Completed]" : "");
+    }
+
+    // Static method to create a TodoItem from a string (used for loading from a file).
+    static TodoItem fromString(const std::string &str) {
+        size_t pos = str.find(" [Completed]");
+        if (pos != std::string::npos) {
+            return TodoItem(str.substr(0, pos), true);
+        } else {
+            return TodoItem(str, false);
+        }
+    }
+
 private:
-    std::string description; // A private member variable to hold the description of the to-do item.
-    bool completed;          // A private member variable to indicate whether the to-do item is completed.
+    std::string description; // Description of the to-do item.
+    bool completed;          // Completion status of the to-do item.
 };
 
 /// Define a class named TodoList to manage a list of to-do items.
 class TodoList {
 public:
+    // Constructor to initialize the TodoList and load items from the file.
+    TodoList() {
+        loadFromFile();
+    }
+
+    // Destructor to save items to the file when the program exits.
+    ~TodoList() {
+        saveToFile();
+    }
+
     // Method to add a new to-do item to the list.
     void addItem(const std::string &description) {
         items.push_back(TodoItem(description)); // Adds a new TodoItem to the vector of items.
+        saveToFile(); // Save the updated list to the file.
     }
 
     // Method to mark a to-do item as completed based on its index in the list.
-    void completeItem(size_t index) { // size_t is an unsigned integer type used for array indexing and loop counting.
+    void completeItem(size_t index) {
         if (index < items.size()) { // Check if the index is valid (within the range of the vector).
             items[index].complete(); // Mark the item as completed.
+            saveToFile(); // Save the updated list to the file.
         } else {
             std::cerr << "Invalid index\n"; // Print an error message if the index is invalid.
         }
     }
 
     // Method to list all to-do items.
-    void listItems() const { // const indicates that this method does not modify any member variables.
+    void listItems() const {
         for (size_t i = 0; i < items.size(); ++i) { // Loop through each item in the vector.
             // Print the item index, description, and completion status.
-            std::cout << i + 1 << ". " << items[i].getDescription()
-                      << (items[i].isCompleted() ? " [Completed]" : "") << "\n";
+            std::cout << i + 1 << ". " << items[i].toString() << "\n";
         }
     }
 
 private:
-    std::vector<TodoItem> items; // A private member variable to store the list of to-do items in a dynamic array (vector).
+    std::vector<TodoItem> items; // A vector to store the list of to-do items.
+
+    // Method to save the to-do list to a file.
+    void saveToFile() const {
+        std::ofstream file("todolist.txt"); // Open the file for writing.
+        if (file.is_open()) { // Check if the file is successfully opened.
+            for (const auto &item : items) {
+                file << item.toString() << "\n"; // Write each item to the file.
+            }
+            file.close(); // Close the file.
+        } else {
+            std::cerr << "Unable to open file for writing\n"; // Print an error message if the file cannot be opened.
+        }
+    }
+
+    // Method to load the to-do list from a file.
+    void loadFromFile() {
+        std::ifstream file("todolist.txt"); // Open the file for reading.
+        if (file.is_open()) { // Check if the file is successfully opened.
+            std::string line;
+            while (getline(file, line)) {
+                items.push_back(TodoItem::fromString(line)); // Read each line and create a TodoItem from it.
+            }
+            file.close(); // Close the file.
+        } else {
+            std::cerr << "Unable to open file for reading\n"; // Print an error message if the file cannot be opened.
+        }
+    }
 };
 
 // Function to display the menu options to the user.
